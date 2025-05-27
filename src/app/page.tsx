@@ -1,6 +1,6 @@
 import Head from 'next/head';
 
-import InteractiveButtonSection from '@/app/components/InteractiveButtonSection'; 
+import InteractiveButtonSection from '@/components/InteractiveButtonSection'; 
 export default function Home() {
   return (
     <>
