@@ -10,7 +10,7 @@ export default function InteractiveButtonSection() {
 
   return (
     <Button onClick={handleClick}>
-      Click Me (from Client Component)
+      Click Me 
     </Button>
   );
 }
