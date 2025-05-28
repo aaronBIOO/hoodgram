@@ -14,8 +14,6 @@ export default function Home() {
         <h1 className="text-4xl font-md mb-8">
           Welcome to your Social App!
         </h1>
-        {/* Render the Client Component here. 
-            The Server Component simply renders this "hole" which will be filled by the Client Component on the browser. */}
         <InteractiveButtonSection />
       </main>
     </>
