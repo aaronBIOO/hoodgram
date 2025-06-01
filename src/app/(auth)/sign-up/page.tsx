@@ -21,10 +21,9 @@ import { useUserContext } from "@/context/AuthContext"; // Placeholder for authe
 
 // The main SignUpPage component
 export default function SignUpPage() {
-  // Initialize toast notifications
-  const router = useRouter(); // Initialize Next.js router for navigation
-  // Placeholder for user context. We'll set this up for Supabase later.
-  // For now, let's assume it provides a checkAuthUser function and a loading state.
+  
+  const router = useRouter(); 
+  
   const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
 
   // 1. Define your form using useForm from react-hook-form.
@@ -39,6 +38,8 @@ export default function SignUpPage() {
     },
   });
 
+  console.log("Form Errors:", form.formState.errors);
+
   // 2. Query hooks for Supabase API calls (these are placeholders for now)
   // We'll replace these with actual Supabase integration later.
   const { mutateAsync: createUserAccount, isPending: isCreatingAccount } = useCreateUserAccount();
@@ -46,6 +47,8 @@ export default function SignUpPage() {
 
   // 3. Define the form submission handler
   const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
+    console.log("handleSignup triggered!");
+    
     try {
       // Attempt to create a new user account via your backend logic (Supabase)
       const newUser = await createUserAccount(user);
@@ -86,13 +89,12 @@ export default function SignUpPage() {
     // 4. The main form structure using Shadcn UI Form component
     <Form {...form}>
       <div className="sm:w-420 flex-center flex-col">
-        {/* Using Next.js Image component for optimization */}
         <Image src="/assets/images/logo.svg" alt="logo" width={100} height={100} /> {/* Added width/height for next/image */}
 
-        <h2 className="h3-bold md:h2-bold pt-5 sm:pt-12">
+        <h2 className="h3-bold md:h2-bold pt-3 sm:pt-0">
           Create a new account
         </h2>
-        <p className="text-light-3 small-medium md:base-regular mt-2">
+        <p className="text-light-3 small-medium md:base-regular mt-0">
           To use our app, please enter your details
         </p>
 

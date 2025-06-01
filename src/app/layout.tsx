@@ -1,5 +1,6 @@
 import './globals.css';
 
+import QueryProvider from '@/lib/react-query/QueryProvider';
 import type { Metadata } from 'next';
 
 import { Inter } from 'next/font/google';
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} bg-dark-1 text-light-1 min-h-screen font-inter`}>
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );
