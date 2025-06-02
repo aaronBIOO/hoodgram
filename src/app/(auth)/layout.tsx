@@ -13,14 +13,14 @@ export default function AuthLayout({
   }
   
   return (
-    <div className="flex min-h-screen">
-      <section className="flex flex-1 justify-center items-center flex-col py-10">
+    <div className="flex h-screen overflow-hidden">
+      <section className="flex flex-1 justify-center items-center flex-col py-10 overflow-y-auto custom-scrollbar h-full">
         {children}
       </section>
 
-      <div className="hidden xl:block relative h-screen w-1/2">
+      <div className="hidden xl:block relative h-full w-1/2">
         <Image
-            src="/assets/images/side-img.svg"
+            src="/assets/images/side-image.svg"
             alt="logo"
             fill 
             className="object-cover" 
