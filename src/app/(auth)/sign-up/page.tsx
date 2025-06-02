@@ -2,12 +2,12 @@
 
 import * as z from "zod"; 
 import { useForm } from "react-hook-form"; 
+import { useState } from "react";
 import Link from "next/link"; 
 import Image from "next/image"; 
 import { useRouter } from "next/navigation"; 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn, useSession } from "next-auth/react";
-
+import { signIn } from "next-auth/react";
 
 // Shadcn UI components 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -15,8 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Eye, EyeOff } from 'lucide-react'; 
  
-
 // Custom components and hooks 
 import Loader from "@/components/shared/Loader"; 
 import { useCreateUserAccount, useSignInAccount } from "@/lib/react-query/queries"; 
@@ -29,6 +29,8 @@ export default function SignUpPage() {
   const router = useRouter(); 
   
   const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
+  
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation), 
@@ -72,14 +74,14 @@ export default function SignUpPage() {
       const isLoggedIn = await checkAuthUser();
 
       if (isLoggedIn) {
-        form.reset(); // Reset form fields on successful login
-        router.push("/"); // Navigate to home page
+        form.reset(); 
+        router.push("/"); 
       } else {
         toast("Login failed. Please try again.");
         return;
       }
     } catch (error) {
-      console.log({ error }); // Log any unexpected errors
+      console.log({ error }); 
     }
   };
 
@@ -100,12 +102,12 @@ export default function SignUpPage() {
 
   return (
     <Form {...form}>
-      <div className="sm:w-420 flex-center flex-col"> {/* Original wrapper div */}
+      <div className="sm:w-420 flex-center flex-col"> 
         <Image src="/assets/images/logo-1.svg" alt="logo" width={70} height={70} />
-        <h2 className="h3-bold md:h2-bold pt-2 sm:pt-4"> {/* Original h2 styling */}
-          Welcome to Hoodgram {/* Updated text as per Figma */}
+        <h2 className="h3-bold md:h2-bold pt-2 sm:pt-4"> 
+          Welcome to Hoodgram 
         </h2>
-        <p className="text-light-3 small-medium md:base-regular mt-2"> {/* Original p styling */}
+        <p className="text-light-3 small-medium md:base-regular mt-2">
           Already have an account?
           <Link
             href="/sign-in"
@@ -120,16 +122,15 @@ export default function SignUpPage() {
           onClick={handleGoogleSignIn}
           className="w-full flex items-center justify-center gap-2 mt-6 h-14 shad-button_primary text-base"
         >
-          {/* Ensure your Google icon is at this path, or remove img if not using */}
           <Image src="/assets/images/google-logo-3.svg" alt="Google icon" width={20} height={20} />
           Sign up with Google
         </Button>
 
         {/* --- OR Separator  --- */}
-        <div className="relative flex justify-center items-center w-full my-4">
-          <Separator className="flex-grow opacity-30 max-w-[44%]" />
+        <div className="relative flex justify-center items-center w-full mt-6 my-4">
+          <Separator className="flex-grow opacity-20 max-w-[44%]" />
           <span className="flex-shrink mx-4 font-medium">Or</span> 
-          <Separator className="flex-grow opacity-30 max-w-[44%]" />
+          <Separator className="flex-grow opacity-20 max-w-[44%]" />
         </div>
       
         {/* Only Email and Password fields remain here for progressive disclosure */}
@@ -160,7 +161,31 @@ export default function SignUpPage() {
               <FormItem>
                 <FormLabel className="shad-form_label">Password</FormLabel>
                 <FormControl>
-                  <Input type="password" className="shad-input" {...field} /> 
+                  <div className="relative h-14"> 
+                    <Input
+                      type={showPassword ? "text" : "password"} 
+                      className="shad-input pr-12" 
+                      {...field}
+                    />
+                    <Button
+                      type="button" 
+                      variant="ghost" 
+                      className="absolute top-1/2 -translate-y-1/2 
+                                 right-3 h-10 w-10 p-0 rounded-md
+                                 flex items-center justify-center
+                                 hover:bg-gray-700/20
+                                 transition-colors duration-150
+                                 mt-[-4px]
+                                 " 
+                      onClick={() => setShowPassword((prev) => !prev)} 
+                    >
+                      {showPassword ? (
+                        <Eye className="h-9 w-9 text-gray-500" />
+                      ) : (
+                        <EyeOff className="h-9 w-9 text-gray-500" />
+                      )}
+                    </Button>
+                  </div> 
                 </FormControl>
                 <FormMessage />
               </FormItem>
