@@ -6,12 +6,16 @@ import Link from "next/link";
 import Image from "next/image"; 
 import { useRouter } from "next/navigation"; 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { signIn, useSession } from "next-auth/react";
+
 
 // Shadcn UI components 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner"; 
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+ 
 
 // Custom components and hooks 
 import Loader from "@/components/shared/Loader"; 
@@ -29,8 +33,6 @@ export default function SignUpPage() {
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation), 
     defaultValues: {
-      name: "",
-      username: "",
       email: "",
       password: "",
     },
@@ -42,6 +44,8 @@ export default function SignUpPage() {
 
   // 3. Define the form submission handler
   const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
+
+    console.log("handleSignup triggered!");
     
     try {
       // Create a new user account via your backend logic (Supabase)
@@ -79,53 +83,61 @@ export default function SignUpPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      const session = await signIn("google", {
+        callbackUrl: "/",
+      });
+
+      if (!session) {
+        toast("Something went wrong. Please try again.");
+        return;
+      }
+    } catch (error) {
+      console.log({ error });
+    }
+  };
+
   return (
     <Form {...form}>
-      <div className="sm:w-420 flex-center flex-col">
-        <Image src="/assets/images/logo-1.svg" alt="logo" width={100} height={100} /> 
-        <h2 className="h3-bold md:h2-bold pt-2 sm:pt-0">
-          Create a new account
+      <div className="sm:w-420 flex-center flex-col"> {/* Original wrapper div */}
+        <Image src="/assets/images/logo-1.svg" alt="logo" width={70} height={70} />
+        <h2 className="h3-bold md:h2-bold pt-2 sm:pt-4"> {/* Original h2 styling */}
+          Welcome to Hoodgram {/* Updated text as per Figma */}
         </h2>
-        <p className="text-light-3 small-medium md:base-regular mt-0">
-          To use our app, please enter your details
+        <p className="text-light-3 small-medium md:base-regular mt-2"> {/* Original p styling */}
+          Already have an account?
+          <Link
+            href="/sign-in"
+            className="text-primary-500 text-small-semibold ml-1">
+            Login 
+          </Link>
         </p>
 
-        {/* The actual HTML form wrapped by react-hook-form's handleSubmit */}
+        {/* --- Google Sign-in Button  --- */}
+        <Button
+          variant="default" 
+          onClick={handleGoogleSignIn}
+          className="w-full flex items-center justify-center gap-2 mt-6 h-14 shad-button_primary text-base"
+        >
+          {/* Ensure your Google icon is at this path, or remove img if not using */}
+          <Image src="/assets/images/google-logo-3.svg" alt="Google icon" width={20} height={20} />
+          Sign up with Google
+        </Button>
+
+        {/* --- OR Separator  --- */}
+        <div className="relative flex justify-center items-center w-full my-4">
+          <Separator className="flex-grow opacity-30 max-w-[44%]" />
+          <span className="flex-shrink mx-4 font-medium">Or</span> 
+          <Separator className="flex-grow opacity-30 max-w-[44%]" />
+        </div>
+      
+        {/* Only Email and Password fields remain here for progressive disclosure */}
         <form
           onSubmit={form.handleSubmit(handleSignup)}
           className="flex flex-col gap-5 w-full mt-4">
 
-          {/* Name Field */}
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="shad-form_label">Name</FormLabel>
-                <FormControl>
-                  <Input type="text" className="shad-input" {...field} />
-                </FormControl>
-                <FormMessage /> {/* Displays validation errors */}
-              </FormItem>
-            )}
-          />
-
-          {/* Username Field */}
-          <FormField
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="shad-form_label">Username</FormLabel>
-                <FormControl>
-                  <Input type="text" className="shad-input" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Email Field */}
+          {/* Email */}
           <FormField
             control={form.control}
             name="email"
@@ -133,14 +145,14 @@ export default function SignUpPage() {
               <FormItem>
                 <FormLabel className="shad-form_label">Email</FormLabel>
                 <FormControl>
-                  <Input type="text" className="shad-input" {...field} />
+                  <Input type="text" className="shad-input" {...field} /> 
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* Password Field */}
+          {/* Password */}
           <FormField
             control={form.control}
             name="password"
@@ -148,33 +160,24 @@ export default function SignUpPage() {
               <FormItem>
                 <FormLabel className="shad-form_label">Password</FormLabel>
                 <FormControl>
-                  <Input type="password" className="shad-input" {...field} />
+                  <Input type="password" className="shad-input" {...field} /> 
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* Submit Button with Loading State */}
-          <Button type="submit" className="shad-button_primary">
+          {/* Submit Button */}
+          <Button type="submit" className="shad-button_primary mx-auto w-sm mt-2"> 
+          {void console.log("Loader condition values:", { isCreatingAccount, isSigningInUser, isUserLoading })}
             {isCreatingAccount || isSigningInUser || isUserLoading ? (
               <div className="flex-center gap-2">
                 <Loader /> Loading...
               </div>
             ) : (
-              "Sign Up"
+              "Sign Up" 
             )}
           </Button>
-
-          {/* Link to Login Page */}
-          <p className="text-small-regular text-light-2 text-center mt-2">
-            Already have an account?
-            <Link
-              href="/sign-in" 
-              className="text-primary-500 text-small-semibold ml-1">
-              Log in
-            </Link>
-          </p>
         </form>
       </div>
     </Form>
