@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Social_', 
-  description: 'A platform for creators', 
+  title: 'Hoodgram', 
+  description: 'A place to connect with real people', 
 };
 
 export default function RootLayout({
