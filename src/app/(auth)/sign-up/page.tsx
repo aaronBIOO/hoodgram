@@ -28,7 +28,7 @@ export default function SignUpPage() {
   
   const router = useRouter(); 
   
-  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
+  const { isLoading: isUserLoading } = useUserContext();
   
   const [showPassword, setShowPassword] = useState(false);
 
@@ -40,52 +40,34 @@ export default function SignUpPage() {
     },
   });
 
-  // Query hooks for Supabase API calls 
+  // Query hooks for API calls 
   const { mutateAsync: createUserAccount, isPending: isCreatingAccount } = useCreateUserAccount();
   const { mutateAsync: signInAccount, isPending: isSigningInUser } = useSignInAccount();
 
-  // 3. Define the form submission handler
-  const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
+  // Form submission handler 
+const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
 
-    console.log("handleSignup triggered!");
-    
-    try {
-      // Create a new user account via your backend logic (Supabase)
-      const newUser = await createUserAccount(user);
+  try {
+    // Create the new user 
+    const newUser = await createUserAccount(user);
 
-      if (!newUser) {
-        toast("Sign up failed. Please try again.");
-        return;
-      }
-
-      // If user creation is successful, attempt to sign them in
-      const session = await signInAccount({
-        email: user.email,
-        password: user.password,
-      });
-
-      if (!session) {
-        toast("Something went wrong. Please login your new account");
-        router.push("/sign-in"); 
-        return;
-      }
-
-      // If sign-in is successful, check the authenticated user status
-      const isLoggedIn = await checkAuthUser();
-
-      if (isLoggedIn) {
-        form.reset(); 
-        router.push("/"); 
-      } else {
-        toast("Login failed. Please try again.");
-        return;
-      }
-    } catch (error) {
-      console.log({ error }); 
+    if (!newUser) {
+      toast("Sign up failed. Please try again.");
+      return;
     }
-  };
+    
+    // Reset the form and redirect to check-email page 
+    router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
+    form.reset(); 
 
-  const handleGoogleSignIn = async () => {
+  } catch (error) {
+    console.error("Error during email/password sign up:", error);
+    toast("An unexpected error occurred during sign up.");
+  }
+};
+
+// Google sign-in handler 
+const handleGoogleSignIn = async () => {
     try {
       const session = await signIn("google", {
         callbackUrl: "/",
@@ -96,7 +78,8 @@ export default function SignUpPage() {
         return;
       }
     } catch (error) {
-      console.log({ error });
+      console.error("Error initiating Google sign in:", error);
+      toast("Failed to initiate Google sign-in. Please try again.");
     }
   };
 
@@ -120,7 +103,10 @@ export default function SignUpPage() {
         <Button
           variant="default" 
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-2 mt-6 h-14 shad-button_primary text-base"
+          className="w-full flex items-center justify-center gap-2 mt-6 h-14 
+                     shad-button_primary text-base hover:bg-primary-600
+                     cursor-pointer
+                     "
         >
           <Image src="/assets/images/google-logo-3.svg" alt="Google icon" width={20} height={20} />
           Sign up with Google
@@ -193,7 +179,7 @@ export default function SignUpPage() {
           />
 
           {/* Submit Button */}
-          <Button type="submit" className="shad-button_primary mx-auto w-sm mt-2"> 
+          <Button type="submit" className="shad-button_primary mx-auto w-sm mt-2 hover:bg-primary-600 cursor-pointer"> 
           {void console.log("Loader condition values:", { isCreatingAccount, isSigningInUser, isUserLoading })}
             {isCreatingAccount || isSigningInUser || isUserLoading ? (
               <div className="flex-center gap-2">
