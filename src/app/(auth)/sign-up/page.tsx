@@ -25,11 +25,8 @@ import { useUserContext } from "@/context/AuthContext";
 
 // The main SignUpPage component
 export default function SignUpPage() {
-  
   const router = useRouter(); 
-  
   const { isLoading: isUserLoading } = useUserContext();
-  
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof SignupValidation>>({
@@ -45,42 +42,37 @@ export default function SignUpPage() {
   const { mutateAsync: signInAccount, isPending: isSigningInUser } = useSignInAccount();
 
   // Form submission handler 
-const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
-
-  try {
-    // Create the new user 
-    const newUser = await createUserAccount(user);
-
-    if (!newUser) {
-      toast("Sign up failed. Please try again.");
-      return;
-    }
-    
-    // Reset the form and redirect to check-email page 
-    router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
-    form.reset(); 
-
-  } catch (error) {
-    console.error("Error during email/password sign up:", error);
-    toast("An unexpected error occurred during sign up.");
-  }
-};
-
-// Google sign-in handler 
-const handleGoogleSignIn = async () => {
+  const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
     try {
-      const session = await signIn("google", {
+      // Create the new user 
+      const newUser = await createUserAccount(user);
+
+      if (!newUser) {
+        toast("Sign up failed. Please try again.");
+        return;
+      }
+      
+      // Reset the form and redirect to check-email page 
+      router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
+      form.reset(); 
+
+    } catch (error) {
+      console.error("Error during email/password sign up:", error);
+      toast("An unexpected error occurred during sign up.");
+    }
+  };
+
+ // Google sign-in handler 
+ const handleGoogleSignIn = async () => {
+    try {
+      await signIn("google", {
         callbackUrl: "/",
       });
 
-      if (!session) {
-        toast("Something went wrong. Please try again.");
-        return;
-      }
     } catch (error) {
-      console.error("Error initiating Google sign in:", error);
-      toast("Failed to initiate Google sign-in. Please try again.");
-    }
+        console.error("Error initiating Google sign in:", error);
+        toast("Failed to initiate Google sign-in. Please try again.");
+      }
   };
 
   return (
@@ -166,9 +158,9 @@ const handleGoogleSignIn = async () => {
                       onClick={() => setShowPassword((prev) => !prev)} 
                     >
                       {showPassword ? (
-                        <Eye className="h-9 w-9 text-gray-500" />
-                      ) : (
                         <EyeOff className="h-9 w-9 text-gray-500" />
+                      ) : (
+                        <Eye className="h-9 w-9 text-gray-500" />
                       )}
                     </Button>
                   </div> 
