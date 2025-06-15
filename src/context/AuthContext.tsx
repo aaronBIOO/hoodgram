@@ -1,86 +1,125 @@
-"use client"; 
+"use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'; 
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'; 
+import { useRouter, usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
-// Define a placeholder type for your user. This will be more detailed with Supabase later.
+import { supabase } from "@/lib/supabase/client";
+
 interface IUser {
   id: string;
   email: string;
-  name?: string;
-  username?: string;
+  name?: string | null;
+  image?: string | null;
+  username?: string | null;
+  supabaseUserId?: string;
 }
 
-// Define the shape of your authentication context.
-// This will contain the current user, loading states, and functions to check auth status.
 interface IContextType {
   user: IUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  checkAuthUser: () => Promise<boolean>; // Function to verify user's authentication status
-  // Add other auth related states/functions here later
+  checkAuthUser: () => Promise<boolean>;
 }
 
-// Create the context with default (empty) values.
-// The default values are what consumers get if they don't have a Provider above them.
 export const AuthContext = createContext<IContextType>({
   user: null,
-  isLoading: false, // Initially, we're not checking auth status
+  isLoading: true,
   isAuthenticated: false,
-  checkAuthUser: async () => false, // Placeholder function
+  checkAuthUser: async () => false,
 });
 
-// The AuthProvider component will wrap parts of your application that need access to auth context.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [user, setUser] = useState<IUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Manages loading state for auth checks
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Tracks if a user is authenticated
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const router = useRouter(); // Initialize router for potential redirects
+  const guestPaths = ["/sign-in", "/sign-up", "/check-email", "/api/auth/error"];
+  const profileCompletionPath = "/complete-profile";
 
-  // This function will eventually check if a user is logged in via Supabase.
-  const checkAuthUser = async (): Promise<boolean> => {
+  // Memoize checkAuthUser to prevent unnecessary re-renders in useEffect
+  const checkAuthUser = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simulate an async check
-      await new Promise(resolve => setTimeout(resolve, 300));
-      // For now, let's assume no user is logged in
-      const currentUser = null; // This will come from Supabase in the future
-
-      if (currentUser) {
-        setUser(currentUser);
-        setIsAuthenticated(true);
-        return true;
+      if (status === "loading") {
+        return false;
       }
+
+      if (session?.user) {
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("user_id, username, name, email, image")
+          .eq("user_id", session.user.id) // This 'id' needs next-auth.d.ts fix
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error fetching user profile:", error);
+          setUser(null);
+          setIsAuthenticated(false);
+          return false;
+        }
+
+        if (profile) {
+          const authenticatedUser: IUser = {
+            id: session.user.id, // This 'id' needs next-auth.d.ts fix
+            email: session.user.email || '',
+            name: profile.name || session.user.name,
+            image: profile.image || session.user.image,
+            username: profile.username,
+            supabaseUserId: profile.user_id,
+          };
+          setUser(authenticatedUser);
+          setIsAuthenticated(true);
+
+          if (!profile.username && pathname !== profileCompletionPath) {
+            router.replace(profileCompletionPath);
+          }
+          return true;
+        } else {
+          console.log("Authenticated user, but no matching profile found.");
+          setUser({
+            id: session.user.id, // This 'id' needs next-auth.d.ts fix
+            email: session.user.email || '',
+            name: session.user.name,
+            image: session.user.image,
+            username: null,
+            supabaseUserId: session.user.id, // This 'id' needs next-auth.d.ts fix
+          });
+          setIsAuthenticated(true);
+
+          if (pathname !== profileCompletionPath) {
+            router.replace(profileCompletionPath);
+          }
+          return true;
+        }
+
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        if (!guestPaths.includes(pathname) && status === "unauthenticated") {
+          router.replace("/sign-in");
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in checkAuthUser:", error);
       setUser(null);
       setIsAuthenticated(false);
-      return false;
-    } catch (error) {
-      console.error(error);
       return false;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session, status, pathname, router, guestPaths, profileCompletionPath, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // We'll add an useEffect here later to run checkAuthUser on component mount.
-  // For now, let's keep it simple to avoid initial errors.
-  
+  // Run checkAuthUser when its dependencies change
   useEffect(() => {
-    // Check if user is logged in on component mount or page refresh
-    const cookieFallback = localStorage.getItem("cookieFallback");
-    if (
-      cookieFallback === "[]" ||
-      cookieFallback === null ||
-      cookieFallback === undefined
-    ) {
-      router.push("/sign-in");
-    }
-
     checkAuthUser();
-  }, []);
+  }, [checkAuthUser]); // Now depends only on the memoized function
 
-  // The value provided to consumers of this context.
   const value = {
     user,
     isLoading,
@@ -95,5 +134,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Custom hook to easily consume the AuthContext.
 export const useUserContext = () => useContext(AuthContext);

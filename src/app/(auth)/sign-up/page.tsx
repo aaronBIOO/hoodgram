@@ -172,8 +172,8 @@ export default function SignUpPage() {
 
           {/* Submit Button */}
           <Button type="submit" className="shad-button_primary mx-auto w-sm mt-2 hover:bg-primary-600 cursor-pointer"> 
-          {void console.log("Loader condition values:", { isCreatingAccount, isSigningInUser, isUserLoading })}
-            {isCreatingAccount || isSigningInUser || isUserLoading ? (
+          {void console.log("Loader condition values:", { isCreatingAccount, isSigningInUser })}
+            {isCreatingAccount || isSigningInUser ? (
               <div className="flex-center gap-2">
                 <Loader /> Loading...
               </div>

@@ -2,7 +2,6 @@ import './globals.css';
 
 import QueryProvider from '@/lib/react-query/QueryProvider';
 import type { Metadata } from 'next';
-
 import { Inter } from 'next/font/google';
 
 const inter = Inter({
