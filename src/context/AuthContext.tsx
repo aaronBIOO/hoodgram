@@ -57,13 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setIsAuthenticated(false);
           setIsLoading(false);
-          return;
+          return; 
         }
 
         // Fetch profile from your 'profiles' table using the Supabase user ID
         const { data: profile, error: profileFetchError } = await supabase
           .from("profiles")
-          .select("user_id, username, name, email, image")
+          .select("user_id, username, name, email, image") // CORRECT: 'username' is included
           .eq("user_id", supabaseUserId) 
           .single();
 
@@ -74,12 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setIsAuthenticated(false);
           setIsLoading(false);
-          return;
+          return; 
         }
 
-        if (!profile || profile.username === null) {
-          // Scenario 1: User signed in, but NO profile record exists. Create one.
-          console.log("AuthContext: Authenticated user but no profile. Attempting to create initial profile.");
+        if (!profile || profile.username === null) { 
+          console.log("AuthContext: Profile is new or incomplete (username is null). Redirecting to complete profile."); 
           
           setUser({
             id: supabaseUserId,
@@ -112,23 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (pathname === profileCompletionPath) {
             router.replace("/");
           }
-        }
-
+        }    
       } catch (error: unknown) {
         console.error("AuthContext: Error during SIGNED_IN event processing:", error);
         setUser(null);
         setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-        console.log("AuthContext: SIGNED_IN event processed. isLoading:", false);
-      }
+        } finally {
+          setIsLoading(false);
+          console.log("AuthContext: SIGNED_IN event processed. isLoading:", false);
+          }
     } else if (event === 'SIGNED_OUT') {
-      // Handle signed out event
       console.log("AuthContext: SIGNED_OUT event detected. Clearing user state.");
       setUser(null);
       setIsAuthenticated(false);
       setIsLoading(false);
-      // Redirect to sign-in page on sign out, unless already on a guest path
       if (!guestPaths.includes(pathname)) {
         router.replace("/sign-in");
       }
@@ -141,7 +137,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.replace("/sign-in");
         }
       } else {
-        // Session found on initial load, trigger profile check (re-use SIGNED_IN logic)
         console.log("AuthContext: INITIAL_SESSION event, session found. Triggering profile check via SIGNED_IN logic.");
         handleAuthEvent('SIGNED_IN', session);
       }
