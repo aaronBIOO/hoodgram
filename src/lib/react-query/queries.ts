@@ -15,19 +15,18 @@ interface CredentialsPlaceholder {
 export const useCreateUserAccount = () => {
   return useMutation({
     mutationFn: async (user: UserPlaceholder) => {
+      console.log("Attempting to sign up user:", user.email); // NEW LOG
       const { data, error } = await supabase.auth.signUp({
         email: user.email,
         password: user.password!, 
       });
 
       if (error) {
-        throw new Error(error.message); 
+        console.error("Supabase signUp error details:", error); // NEW CRUCIAL LOG
+        throw new Error(error.message || "An unknown error occurred during sign up."); 
       }
-      if (data.user) {
-        return data.user; 
-      } else {
-        throw new Error("User created but no session returned, please check email for verification.");
-      }
+
+      return data.user; 
     },
   });
 };

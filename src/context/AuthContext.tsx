@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'; 
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react'; 
 
+import { Session } from '@supabase/supabase-js';
 import { supabase } from "@/lib/supabase/client";
 
 interface IUser {
@@ -19,7 +20,7 @@ interface IContextType {
   user: IUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  checkAuthUser: () => Promise<boolean>;
+  checkAuthUser: () => Promise<boolean>; 
 }
 
 export const AuthContext = createContext<IContextType>({
@@ -30,7 +31,7 @@ export const AuthContext = createContext<IContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -41,90 +42,146 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const guestPaths = ["/sign-in", "/sign-up", "/check-email", "/api/auth/error"];
   const profileCompletionPath = "/complete-profile";
 
-  // Memoize checkAuthUser to prevent unnecessary re-renders in useEffect
-  const checkAuthUser = useCallback(async (): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      if (status === "loading") {
-        return false;
-      }
+  const handleAuthEvent = useCallback(async (event: string, session: Session | null) => {
+    console.log("AuthContext: onAuthStateChange event:", event, "session:", session); 
 
-      if (session?.user) {
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("user_id, username, name, email, image")
-          .eq("user_id", session.user.id) // This 'id' needs next-auth.d.ts fix
-          .single();
+    if (event === 'SIGNED_IN' && session) {
+      setIsLoading(true); 
+      console.log("AuthContext: SIGNED_IN event detected. Session user ID:", session.user?.id);
 
-        if (error && error.code !== 'PGRST116') {
-          console.error("Error fetching user profile:", error);
+      try {
+        const supabaseUserId = session.user?.id; 
+
+        if (!supabaseUserId) {
+          console.error("AuthContext: SIGNED_IN event with no user ID in session.");
           setUser(null);
           setIsAuthenticated(false);
+          setIsLoading(false);
           return false;
         }
 
-        if (profile) {
-          const authenticatedUser: IUser = {
-            id: session.user.id, // This 'id' needs next-auth.d.ts fix
-            email: session.user.email || '',
-            name: profile.name || session.user.name,
-            image: profile.image || session.user.image,
-            username: profile.username,
-            supabaseUserId: profile.user_id,
-          };
-          setUser(authenticatedUser);
-          setIsAuthenticated(true);
+        // Fetch profile from your 'profiles' table using the Supabase user ID
+        const { data: profile, error: profileFetchError } = await supabase
+          .from("profiles")
+          .select("user_id, username, name, email, image")
+          .eq("user_id", supabaseUserId) 
+          .single();
 
-          if (!profile.username && pathname !== profileCompletionPath) {
-            router.replace(profileCompletionPath);
-          }
-          return true;
-        } else {
-          console.log("Authenticated user, but no matching profile found.");
+        console.log("AuthContext: Profile fetch result after SIGNED_IN:", { profile, profileFetchError });
+
+        if (profileFetchError && profileFetchError.code !== 'PGRST116') {
+          console.error("Error fetching user profile after SIGNED_IN event:", profileFetchError);
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return false;
+        }
+
+        if (!profile) {
+          // Scenario 1: User signed in, but NO profile record exists. Create one.
+          console.log("AuthContext: Authenticated user but no profile. Attempting to create initial profile.");
+          
           setUser({
-            id: session.user.id, // This 'id' needs next-auth.d.ts fix
+            id: supabaseUserId,
             email: session.user.email || '',
-            name: session.user.name,
-            image: session.user.image,
+            name: session.user.user_metadata?.full_name as (string | null) || null,
+            image: session.user.user_metadata?.avatar_url as (string | null) || null,
             username: null,
-            supabaseUserId: session.user.id, // This 'id' needs next-auth.d.ts fix
+            supabaseUserId: supabaseUserId,
           });
           setIsAuthenticated(true);
 
           if (pathname !== profileCompletionPath) {
             router.replace(profileCompletionPath);
           }
-          return true;
-        }
 
-      } else {
+        } else if (!profile.username) {
+          console.log("AuthContext: Profile found, but username is missing. Redirecting to complete profile.");
+          setUser({
+            id: supabaseUserId,
+            email: profile.email || session.user.email || '',
+            name: profile.name || session.user.user_metadata?.full_name as (string | null) || null,
+            image: profile.image || session.user.user_metadata?.avatar_url as (string | null) || null,
+            username: profile.username, 
+            supabaseUserId: profile.user_id,
+          });
+          setIsAuthenticated(true);
+
+          if (pathname !== profileCompletionPath) {
+            router.replace(profileCompletionPath);
+          }
+
+        } else {
+          // Scenario 3: Full profile exists (username is set). User is authenticated and complete.
+          console.log("AuthContext: Full profile found. User is authenticated and complete.");
+          const authenticatedUser: IUser = {
+            id: supabaseUserId,
+            email: profile.email || session.user.email || '',
+            name: profile.name || session.user.user_metadata?.full_name as (string | null) || null,
+            image: profile.image || session.user.user_metadata?.avatar_url as (string | null) || null,
+            username: profile.username,
+            supabaseUserId: profile.user_id,
+          };
+          setUser(authenticatedUser);
+          setIsAuthenticated(true);
+          
+          // If on /complete-profile but profile is complete, redirect to homepage
+          if (pathname === profileCompletionPath) {
+            router.replace("/");
+          }
+        }
+      } catch (error: unknown) {
+        console.error("AuthContext: Error during SIGNED_IN event processing:", error);
         setUser(null);
         setIsAuthenticated(false);
-        if (!guestPaths.includes(pathname) && status === "unauthenticated") {
-          router.replace("/sign-in");
-        }
-        return false;
+      } finally {
+        setIsLoading(false);
+        console.log("AuthContext: SIGNED_IN event processed. isLoading:", false);
       }
-    } catch (error) {
-      console.error("Error in checkAuthUser:", error);
+    } else if (event === 'SIGNED_OUT') {
+      // Handle signed out event
+      console.log("AuthContext: SIGNED_OUT event detected. Clearing user state.");
       setUser(null);
       setIsAuthenticated(false);
-      return false;
-    } finally {
       setIsLoading(false);
-    }
-  }, [session, status, pathname, router, guestPaths, profileCompletionPath, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+      // Redirect to sign-in page on sign out, unless already on a guest path
+      if (!guestPaths.includes(pathname)) {
+        router.replace("/sign-in");
+      }
+    } else if (event === 'INITIAL_SESSION') {
+      if (!session) {
+        console.log("AuthContext: INITIAL_SESSION event, no session found. Unauthenticated.");
+        setUser(null);
+        setIsAuthenticated(false);
+        if (!guestPaths.includes(pathname) && sessionStatus === "unauthenticated") {
+          router.replace("/sign-in");
+        }
+      } else {
+        console.log("AuthContext: INITIAL_SESSION event, session found. Triggering profile check.");
+        handleAuthEvent('SIGNED_IN', session); 
+      }
+      setIsLoading(false); 
+    }   
+  }, [pathname, router, guestPaths, profileCompletionPath, supabase, sessionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Run checkAuthUser when its dependencies change
+  // Subscribe to auth state changes on component mount
   useEffect(() => {
-    checkAuthUser();
-  }, [checkAuthUser]); // Now depends only on the memoized function
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(() => {
+        handleAuthEvent(event, session);
+      }, 0);
+    });
+
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, [handleAuthEvent]); 
 
   const value = {
     user,
     isLoading,
     isAuthenticated,
-    checkAuthUser,
+    checkAuthUser: async () => false, 
   };
 
   return (

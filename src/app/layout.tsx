@@ -1,18 +1,17 @@
 import './globals.css';
-
-import QueryProvider from '@/lib/react-query/QueryProvider';
+import { Providers } from './providers'; 
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-inter-variable', 
+  variable: '--font-inter-variable',
 });
 
 export const metadata: Metadata = {
-  title: 'Hoodgram', 
-  description: 'A place to connect with real people', 
+  title: 'Hoodgram',
+  description: 'A place to connect with real people',
 };
 
 export default function RootLayout({
@@ -23,9 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} bg-dark-1 text-light-1 min-h-screen font-inter`}>
-        <QueryProvider>
+        <Providers>
           {children}
-        </QueryProvider>
+        </Providers>
       </body>
     </html>
   );
