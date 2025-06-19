@@ -53,11 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const supabaseUserId = session.user?.id; 
 
         if (!supabaseUserId) {
-          console.error("AuthContext: SIGNED_IN event with no user ID in session.");
+          console.error("AuthContext: SIGNED_IN event with no user ID in session. Cannot process.");
           setUser(null);
           setIsAuthenticated(false);
           setIsLoading(false);
-          return false;
+          return;
         }
 
         // Fetch profile from your 'profiles' table using the Supabase user ID
@@ -74,19 +74,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setIsAuthenticated(false);
           setIsLoading(false);
-          return false;
+          return;
         }
 
-        if (!profile) {
+        if (!profile || profile.username === null) {
           // Scenario 1: User signed in, but NO profile record exists. Create one.
           console.log("AuthContext: Authenticated user but no profile. Attempting to create initial profile.");
           
           setUser({
             id: supabaseUserId,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name as (string | null) || null,
-            image: session.user.user_metadata?.avatar_url as (string | null) || null,
-            username: null,
+            email: (profile?.email || session.user.email) || '', 
+            name: (profile?.name || (session.user.user_metadata?.full_name as (string | null)) || null),
+            image: (profile?.image || (session.user.user_metadata?.avatar_url as (string | null)) || null),
+            username: profile?.username || null, 
             supabaseUserId: supabaseUserId,
           });
           setIsAuthenticated(true);
@@ -95,30 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.replace(profileCompletionPath);
           }
 
-        } else if (!profile.username) {
-          console.log("AuthContext: Profile found, but username is missing. Redirecting to complete profile.");
-          setUser({
-            id: supabaseUserId,
-            email: profile.email || session.user.email || '',
-            name: profile.name || session.user.user_metadata?.full_name as (string | null) || null,
-            image: profile.image || session.user.user_metadata?.avatar_url as (string | null) || null,
-            username: profile.username, 
-            supabaseUserId: profile.user_id,
-          });
-          setIsAuthenticated(true);
-
-          if (pathname !== profileCompletionPath) {
-            router.replace(profileCompletionPath);
-          }
-
-        } else {
-          // Scenario 3: Full profile exists (username is set). User is authenticated and complete.
+        } else { 
           console.log("AuthContext: Full profile found. User is authenticated and complete.");
           const authenticatedUser: IUser = {
             id: supabaseUserId,
             email: profile.email || session.user.email || '',
-            name: profile.name || session.user.user_metadata?.full_name as (string | null) || null,
-            image: profile.image || session.user.user_metadata?.avatar_url as (string | null) || null,
+            name: profile.name || (session.user.user_metadata?.full_name as (string | null)) || null,
+            image: profile.image || (session.user.user_metadata?.avatar_url as (string | null)) || null,
             username: profile.username,
             supabaseUserId: profile.user_id,
           };
@@ -130,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.replace("/");
           }
         }
+
       } catch (error: unknown) {
         console.error("AuthContext: Error during SIGNED_IN event processing:", error);
         setUser(null);
@@ -157,10 +141,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.replace("/sign-in");
         }
       } else {
-        console.log("AuthContext: INITIAL_SESSION event, session found. Triggering profile check.");
-        handleAuthEvent('SIGNED_IN', session); 
+        // Session found on initial load, trigger profile check (re-use SIGNED_IN logic)
+        console.log("AuthContext: INITIAL_SESSION event, session found. Triggering profile check via SIGNED_IN logic.");
+        handleAuthEvent('SIGNED_IN', session);
       }
-      setIsLoading(false); 
+      setIsLoading(false);
     }   
   }, [pathname, router, guestPaths, profileCompletionPath, supabase, sessionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
