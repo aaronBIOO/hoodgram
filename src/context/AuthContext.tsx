@@ -129,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.replace("/sign-in");
       }
     } else if (event === 'INITIAL_SESSION') {
+      console.log("AuthContext: INITIAL_SESSION event. Checking for active session.");
       if (!session) {
         console.log("AuthContext: INITIAL_SESSION event, no session found. Unauthenticated.");
         setUser(null);
@@ -138,7 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         console.log("AuthContext: INITIAL_SESSION event, session found. Triggering profile check via SIGNED_IN logic.");
-        handleAuthEvent('SIGNED_IN', session);
       }
       setIsLoading(false);
     }   
