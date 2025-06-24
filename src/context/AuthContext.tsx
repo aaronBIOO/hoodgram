@@ -138,7 +138,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.replace("/sign-in");
         }
       } else {
-        console.log("AuthContext: INITIAL_SESSION event, session found. Triggering profile check via SIGNED_IN logic.");
+        console.log("AuthContext: INITIAL_SESSION: Session found in storage. Awaiting explicit SIGNED_IN/SIGNED_OUT event.");
+
+        setUser({
+          id: session.user?.id || '',
+          email: session.user?.email || '',
+          name: (session.user?.user_metadata?.full_name as (string | null)) || null,
+          image: (session.user?.user_metadata?.avatar_url as (string | null)) || null,
+          username: null, // Initial session won't have profile username directly from auth.users metadata
+          supabaseUserId: session.user?.id,
+        });
+        setIsAuthenticated(true);
       }
       setIsLoading(false);
     }   

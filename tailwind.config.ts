@@ -2,7 +2,7 @@ import type { Config } from 'tailwindcss';
 import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
-  darkMode: ["class"], // This enables dark mode toggling using a 'dark' class on the HTML element
+  darkMode: ["class", "dark"], // This enables dark mode toggling using a 'dark' class on the HTML element
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 import Link from "next/link"; 
 import Image from "next/image"; 
-import { useRouter } from "next/navigation"; 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
 
@@ -19,13 +18,12 @@ import { Eye, EyeOff } from 'lucide-react';
  
 // Custom components and hooks 
 import Loader from "@/components/shared/Loader"; 
-import { useCreateUserAccount, useSignInAccount } from "@/lib/react-query/queries"; 
+import { useCreateUserAccount } from "@/lib/react-query/queries"; 
 import { SignupValidation } from "@/lib/validation";
 import { useUserContext } from "@/context/AuthContext";
 
 // The main SignUpPage component
 export default function SignUpPage() {
-  const router = useRouter(); 
   const { isLoading: isUserLoading } = useUserContext();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -39,26 +37,27 @@ export default function SignUpPage() {
 
   // Query hooks for API calls 
   const { mutateAsync: createUserAccount, isPending: isCreatingAccount } = useCreateUserAccount();
-  const { mutateAsync: signInAccount, isPending: isSigningInUser } = useSignInAccount();
 
   // Form submission handler 
   const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
-    try {
-      // Create the new user 
-      const newUser = await createUserAccount(user);
-
-      if (!newUser) {
-        toast("Sign up failed. Please try again.");
-        return;
-      }
+    try { 
+      await createUserAccount(user);
+      toast.success("Account created! Please check your email to confirm your account.");
       
       // Reset the form and redirect to check-email page 
-      router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
+      // router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
       form.reset(); 
 
-    } catch (error) {
+    } catch (error: unknown) { 
       console.error("Error during email/password sign up:", error);
-      toast("An unexpected error occurred during sign up.");
+      let errorMessage = "An unexpected error occurred during sign up. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast.error(errorMessage);
+      form.setError("root", { message: errorMessage }); 
     }
   };
 
@@ -69,11 +68,19 @@ export default function SignUpPage() {
         callbackUrl: "/",
       });
 
-    } catch (error) {
-        console.error("Error initiating Google sign in:", error);
-        toast("Failed to initiate Google sign-in. Please try again.");
+    } catch (error: unknown) { 
+      console.error("Error initiating Google sign in:", error);
+      let errorMessage = "Failed to initiate Google sign-in. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
+      toast.error(errorMessage);
+    }
   };
+
+  const isFormSubmitting = isCreatingAccount || isUserLoading;
 
   return (
     <Form {...form}>
@@ -99,6 +106,7 @@ export default function SignUpPage() {
                      shad-button_primary text-base hover:bg-primary-600
                      cursor-pointer
                      "
+          disabled={isFormSubmitting}
         >
           <Image src="/assets/images/google-logo-3.svg" alt="Google icon" width={20} height={20} />
           Sign up with Google
@@ -144,6 +152,7 @@ export default function SignUpPage() {
                       type={showPassword ? "text" : "password"} 
                       className="shad-input pr-12" 
                       {...field}
+                      disabled={isFormSubmitting}
                     />
                     <Button
                       type="button" 
@@ -156,6 +165,7 @@ export default function SignUpPage() {
                                  mt-[-4px]
                                  " 
                       onClick={() => setShowPassword((prev) => !prev)} 
+                      disabled={isFormSubmitting}
                     >
                       {showPassword ? (
                         <EyeOff className="h-9 w-9 text-gray-500" />
@@ -171,9 +181,11 @@ export default function SignUpPage() {
           />
 
           {/* Submit Button */}
-          <Button type="submit" className="shad-button_primary mx-auto w-sm mt-2 hover:bg-primary-600 cursor-pointer"> 
-          {void console.log("Loader condition values:", { isCreatingAccount, isSigningInUser })}
-            {isCreatingAccount || isSigningInUser ? (
+          <Button type="submit" 
+          className="shad-button_primary mx-auto w-sm mt-2 hover:bg-primary-600 cursor-pointer"
+          disabled={isFormSubmitting}
+          > 
+            {isFormSubmitting ? (
               <div className="flex-center gap-2">
                 <Loader /> Loading...
               </div>
