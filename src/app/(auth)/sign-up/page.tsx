@@ -27,6 +27,7 @@ import { useUserContext } from "@/context/AuthContext";
 export default function SignUpPage() {
   const { isLoading: isUserLoading } = useUserContext();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoadingAfterSubmit, setIsLoadingAfterSubmit] = useState(false);
 
   const router = useRouter();
 
@@ -43,14 +44,16 @@ export default function SignUpPage() {
 
   // Form submission handler 
   const handleSignup = async (user: z.infer<typeof SignupValidation>) => {
+    
+    setIsLoadingAfterSubmit(true);
+    
     try { 
       await createUserAccount(user);
       toast.success("Account created! Please check your email to confirm your account.");
       
       // Reset the form and redirect to check-email page 
       router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
-      form.reset(); 
-
+      
     } catch (error: unknown) { 
       console.error("Error during email/password sign up:", error);
       let errorMessage = "An unexpected error occurred during sign up. Please try again.";
@@ -61,6 +64,8 @@ export default function SignUpPage() {
       }
       toast.error(errorMessage);
       form.setError("root", { message: errorMessage }); 
+    } finally { 
+      setIsLoadingAfterSubmit(false); 
     }
   };
 
@@ -83,7 +88,7 @@ export default function SignUpPage() {
     }
   };
 
-  const isFormSubmitting = isCreatingAccount || isUserLoading;
+  const isFormSubmitting = isCreatingAccount || isUserLoading || isLoadingAfterSubmit;
 
   return (
     <Form {...form}>
