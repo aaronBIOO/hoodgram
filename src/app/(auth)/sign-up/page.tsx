@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image"; 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 // Shadcn UI components 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -27,6 +28,8 @@ export default function SignUpPage() {
   const { isLoading: isUserLoading } = useUserContext();
   const [showPassword, setShowPassword] = useState(false);
 
+  const router = useRouter();
+
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation), 
     defaultValues: {
@@ -45,7 +48,7 @@ export default function SignUpPage() {
       toast.success("Account created! Please check your email to confirm your account.");
       
       // Reset the form and redirect to check-email page 
-      // router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
+      router.push(`/check-email?email=${encodeURIComponent(user.email)}`);
       form.reset(); 
 
     } catch (error: unknown) { 

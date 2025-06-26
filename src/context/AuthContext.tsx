@@ -131,27 +131,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else if (event === 'INITIAL_SESSION') {
       console.log("AuthContext: INITIAL_SESSION event. Checking for active session.");
       if (!session) {
-        console.log("AuthContext: INITIAL_SESSION event, no session found. Unauthenticated.");
+        console.log("AuthContext: INITIAL_SESSION: No session found. User is unauthenticated.");
         setUser(null);
         setIsAuthenticated(false);
-        if (!guestPaths.includes(pathname) && sessionStatus === "unauthenticated") {
+        if (!guestPaths.includes(pathname)) {
           router.replace("/sign-in");
         }
       } else {
-        console.log("AuthContext: INITIAL_SESSION: Session found in storage. Awaiting explicit SIGNED_IN/SIGNED_OUT event.");
-
-        setUser({
-          id: session.user?.id || '',
-          email: session.user?.email || '',
-          name: (session.user?.user_metadata?.full_name as (string | null)) || null,
-          image: (session.user?.user_metadata?.avatar_url as (string | null)) || null,
-          username: null, // Initial session won't have profile username directly from auth.users metadata
-          supabaseUserId: session.user?.id,
-        });
-        setIsAuthenticated(true);
+        console.log("AuthContext: INITIAL_SESSION: Session found in storage. Awaiting explicit SIGNED_IN/SIGNED_OUT event to confirm validity.");
+        setUser(null); 
+        setIsAuthenticated(false); 
       }
-      setIsLoading(false);
-    }   
+      setIsLoading(false); 
+    }
   }, [pathname, router, guestPaths, profileCompletionPath, supabase, sessionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Subscribe to auth state changes on component mount
