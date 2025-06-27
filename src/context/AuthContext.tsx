@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react'; 
+ 
 
 import { Session } from '@supabase/supabase-js';
 import { supabase } from "@/lib/supabase/client";
@@ -31,7 +31,6 @@ export const AuthContext = createContext<IContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { status: sessionStatus } = useSession();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -144,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setIsLoading(false); 
     }
-  }, [pathname, router, guestPaths, profileCompletionPath, supabase, sessionStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, router, guestPaths, profileCompletionPath, supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Subscribe to auth state changes on component mount
   useEffect(() => {

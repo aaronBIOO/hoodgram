@@ -6,8 +6,8 @@ import { useState } from "react";
 import Link from "next/link"; 
 import Image from "next/image"; 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 
 // Shadcn UI components 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -71,26 +71,36 @@ export default function SignUpPage() {
 
  // Google sign-in handler 
  const handleGoogleSignIn = async () => {
-    try {
-      await signIn("google", {
-        callbackUrl: "/",
-      });
-
-    } catch (error: unknown) { 
-      console.error("Error initiating Google sign in:", error);
-      let errorMessage = "Failed to initiate Google sign-in. Please try again.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      toast.error(errorMessage);
+  try {
+    // Use Supabase's signInWithOAuth for Google
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: _data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`, // Redirects to your app's base URL after Supabase processes login
+      },
+    });
+  
+    if (error) {
+      console.error("Supabase Google sign-in error:", error);
+    throw new Error(error.message); // Throw to be caught by outer catch
+  }
+  
+  } catch (error: unknown) { 
+    console.error("Error initiating Google sign in:", error);
+    let errorMessage = "Failed to initiate Google sign-in. Please try again.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
     }
-  };
+  toast.error(errorMessage);
+}
+};
 
-  const isFormSubmitting = isCreatingAccount || isUserLoading || isLoadingAfterSubmit;
+const isFormSubmitting = isCreatingAccount || isUserLoading || isLoadingAfterSubmit;
 
-  return (
+return (
     <Form {...form}>
       <div className="sm:w-420 flex-center flex-col"> 
         <Image src="/assets/images/logo-1.svg" alt="logo" width={70} height={70} />
