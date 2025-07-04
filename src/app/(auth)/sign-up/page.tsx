@@ -72,18 +72,17 @@ export default function SignUpPage() {
  // Google sign-in handler 
  const handleGoogleSignIn = async () => {
   try {
-    // Use Supabase's signInWithOAuth for Google
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: _data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`, // Redirects to your app's base URL after Supabase processes login
+        redirectTo: `${window.location.origin}/`, 
       },
     });
   
     if (error) {
       console.error("Supabase Google sign-in error:", error);
-    throw new Error(error.message); // Throw to be caught by outer catch
+    throw new Error(error.message); 
   }
   
   } catch (error: unknown) { 
