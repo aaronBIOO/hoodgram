@@ -9,74 +9,46 @@ export async function middleware(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const { pathname } = req.nextUrl;
 
-  const publicPaths = ['/', '/sign-in', '/sign-up', '/check-email', '/api/auth/error'];
+  // Add '/auth/callback' to publicPaths so Middleware doesn't intercept it.
+  // The API route at /auth/callback will handle the session and redirect.
+  const publicPaths = ['/', '/sign-in', '/sign-up', '/check-email', '/api/auth/error', '/auth/callback'];
   const completeProfilePath = '/complete-profile';
 
+  // Middleware Debugging Logs (These will appear in your NEXT.JS TERMINAL)
   console.log(`Middleware: Path: "${pathname}", Session: ${!!session}`);
   if (session) {
-    console.log(`Middleware: User ID: ${session.user.id}`);
+      console.log(`Middleware: User ID: ${session.user.id}`);
   }
 
+  // Scenario 1: User is NOT authenticated
   if (!session) {
+    // If trying to access a protected path, redirect to sign-in
     if (!publicPaths.includes(pathname) && pathname !== completeProfilePath) {
-      console.log(`Middleware: Not authenticated. Redirecting ${pathname} to /sign-in.`);
+      console.log(`Middleware: Not authenticated. Redirecting protected path (${pathname}) to /sign-in.`);
       const redirectUrl = req.nextUrl.clone();
       redirectUrl.pathname = '/sign-in';
       redirectUrl.searchParams.set('redirectedFrom', pathname); 
-      return NextResponse.redirect(redirectUrl); 
-    }
-    return res; 
-  }
-
-  // User IS authenticated
-  try {
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('user_id', session.user.id)
-      .single();
-
-    console.log('--- Middleware Profile Debug Log ---');
-    console.log('Raw Profile Data:', profile);
-    console.log('Raw Profile Error:', profileError);
-    console.log(`Profile Exists: ${!!profile}`);
-    console.log(`Username: ${profile ? profile.username : 'N/A (Profile null)'}`);
-    console.log('--- End Middleware Profile Debug Log ---');
-
-    // Scenario 1: Profile does NOT exist OR profile exists but username IS null
-    if (!profile || profile.username === null) {
-      console.log(`Middleware: Profile incomplete for ${session.user.id}.`);
-      if (pathname !== completeProfilePath) {
-        const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = completeProfilePath;
-        return NextResponse.redirect(redirectUrl);
-      }
-      return res; // Already on complete-profile
-    } 
-    // Scenario 2: Profile EXISTS AND username is NOT null (profile is complete)
-    else { 
-      console.log(`Middleware: Profile complete for ${session.user.id}.`);
-      if (pathname === completeProfilePath) {
-        const redirectUrl = req.nextUrl.clone();
-        redirectUrl.pathname = '/';
-        return NextResponse.redirect(redirectUrl);
-      }
-      return res; // Allow to proceed
-    }
-
-  } catch (e) {
-    console.error('Middleware: Unexpected error during profile check:', e);
-    if (!publicPaths.includes(pathname) && pathname !== completeProfilePath) { 
-      const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = '/sign-in';
       return NextResponse.redirect(redirectUrl);
     }
-    return res;
+    return res; // Allow access to public paths
   }
+
+  // Scenario 2: User IS authenticated (session exists)
+  // Middleware's primary role now is to ensure authenticated users are not on public auth pages.
+  // The /auth/callback API route handles the initial profile completion redirect.
+  if (publicPaths.includes(pathname) && pathname !== '/') { // If on a public auth page (but not homepage)
+    console.log(`Middleware: Authenticated user on auth page (${pathname}), redirecting to /.`);
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/';
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // If authenticated and not on a public auth page, allow access.
+  return res;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|assets).*)', 
+    '/((?!_next/static|_next/image|favicon.ico|assets).*)',
   ],
 };

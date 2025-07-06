@@ -59,21 +59,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return; 
         }
 
-        // Fetch profile from your 'profiles' table using the Supabase user ID
-        const { data: profile, error: profileFetchError } = await supabase
-          .from("profiles")
-          .select("user_id, username, name, email, image") // CORRECT: 'username' is included
-          .eq("user_id", supabaseUserId) 
-          .single();
+        // Fetch profile from 'profiles' table using the Supabase user ID
+        let profile = null;
+        let profileFetchError = null;
+        const MAX_RETRIES = 5; // Max attempts to fetch profile
+        const RETRY_DELAY_MS = 500; // Delay between retries
 
-        console.log("AuthContext: Profile fetch result after SIGNED_IN:", { profile, profileFetchError });
+        for (let i = 0; i < MAX_RETRIES; i++) {
+            console.log(`AuthContext: Attempt ${i + 1}/${MAX_RETRIES} to fetch profile for user ID: ${supabaseUserId}`);
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("user_id, username, name, email, image") 
+                .eq("user_id", supabaseUserId) 
+                .single();
 
-        if (profileFetchError && profileFetchError.code !== 'PGRST116') {
-          console.error("Error fetching user profile after SIGNED_IN event:", profileFetchError);
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return; 
+            if (data) {
+                profile = data;
+                profileFetchError = null; // Clear any previous error
+                break; // Profile found, exit loop
+            } else if (error && error.code !== 'PGRST116') {
+                // If it's a real error (not just "no rows found"), log and break/return
+                profileFetchError = error;
+                console.error(`AuthContext: Error fetching user profile on attempt ${i + 1}:`, error);
+                break; // Exit on hard error
+            }
+
+            // If profile is null (PGRST116 - no rows found), or just an unexpected empty data, retry after delay
+            if (i < MAX_RETRIES - 1) {
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+            }
+        }
+
+        console.log("AuthContext: Final profile fetch result after retries:", { profile, profileFetchError });
+
+        // Handle hard errors (not PGRST116 - no rows found)
+        if (profileFetchError) { 
+            console.error("AuthContext: Final error fetching user profile after retries:", profileFetchError);
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsLoading(false);
+            return;
         }
 
         if (!profile || profile.username === null) { 
@@ -89,9 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           setIsAuthenticated(true);
 
-          if (pathname !== profileCompletionPath) {
-            router.replace(profileCompletionPath);
-          }
 
         } else { 
           console.log("AuthContext: Full profile found. User is authenticated and complete.");
@@ -108,7 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // If on /complete-profile but profile is complete, redirect to homepage
           if (pathname === profileCompletionPath) {
-            router.replace("/");
           }
         }    
       } catch (error: unknown) {
@@ -125,7 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthenticated(false);
       setIsLoading(false);
       if (!guestPaths.includes(pathname)) {
-        router.replace("/sign-in");
       }
     } else if (event === 'INITIAL_SESSION') {
       console.log("AuthContext: INITIAL_SESSION event. Checking for active session.");
@@ -133,13 +153,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("AuthContext: INITIAL_SESSION: No session found. User is unauthenticated.");
         setUser(null);
         setIsAuthenticated(false);
-        if (!guestPaths.includes(pathname)) {
-          router.replace("/sign-in");
+        if (!guestPaths.includes(pathname)) { 
         }
       } else {
         console.log("AuthContext: INITIAL_SESSION: Session found in storage. Awaiting explicit SIGNED_IN/SIGNED_OUT event to confirm validity.");
-        setUser(null); 
-        setIsAuthenticated(false); 
       }
       setIsLoading(false); 
     }
