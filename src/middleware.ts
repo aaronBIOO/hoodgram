@@ -3,17 +3,12 @@ import { updateSession } from '@/utils/supabase/middleware';
 import { createMiddlewareClient } from '@supabase/ssr'; 
 
 export async function middleware(request: NextRequest) {
-  // Step 1: Run the Supabase session update helper.
-  // This refreshes the session and updates cookies in the response.
   const response = await updateSession(request);
-
-  // Step 2: Now, create a new Supabase client from the updated request/response
-  // to safely read the session for custom middleware logic.
   const supabase = createMiddlewareClient({
     request,
     response,
   });
-  const { data: { session } } = await supabase.auth.getSession(); // Get the session after update
+  const { data: { session } } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
 
