@@ -1,20 +1,26 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { updateSession } from '@/utils/supabase/middleware'; 
+import { createMiddlewareClient } from '@supabase/ssr'; 
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+export async function middleware(request: NextRequest) {
+  // Step 1: Run the Supabase session update helper.
+  // This refreshes the session and updates cookies in the response.
+  const response = await updateSession(request);
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const { pathname } = req.nextUrl;
+  // Step 2: Now, create a new Supabase client from the updated request/response
+  // to safely read the session for custom middleware logic.
+  const supabase = createMiddlewareClient({
+    request,
+    response,
+  });
+  const { data: { session } } = await supabase.auth.getSession(); // Get the session after update
 
-  // Add '/auth/callback' to publicPaths so Middleware doesn't intercept it.
-  // The API route at /auth/callback will handle the session and redirect.
+  const { pathname } = request.nextUrl;
+
   const publicPaths = ['/', '/sign-in', '/sign-up', '/check-email', '/api/auth/error', '/auth/callback'];
   const completeProfilePath = '/complete-profile';
 
-  // Middleware Debugging Logs (These will appear in your NEXT.JS TERMINAL)
+  // Middleware Debugging Logs
   console.log(`Middleware: Path: "${pathname}", Session: ${!!session}`);
   if (session) {
       console.log(`Middleware: User ID: ${session.user.id}`);
@@ -22,33 +28,31 @@ export async function middleware(req: NextRequest) {
 
   // Scenario 1: User is NOT authenticated
   if (!session) {
-    // If trying to access a protected path, redirect to sign-in
     if (!publicPaths.includes(pathname) && pathname !== completeProfilePath) {
       console.log(`Middleware: Not authenticated. Redirecting protected path (${pathname}) to /sign-in.`);
-      const redirectUrl = req.nextUrl.clone();
+      const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/sign-in';
       redirectUrl.searchParams.set('redirectedFrom', pathname); 
       return NextResponse.redirect(redirectUrl);
     }
-    return res; // Allow access to public paths
+    return response; // Allow access to public paths
   }
 
-  // Scenario 2: User IS authenticated (session exists)
-  // Middleware's primary role now is to ensure authenticated users are not on public auth pages.
-  // The /auth/callback API route handles the initial profile completion redirect.
-  if (publicPaths.includes(pathname) && pathname !== '/') { // If on a public auth page (but not homepage)
+  // Scenario 2: User IS authenticated
+  // If an authenticated user tries to access a public auth page (but not homepage), redirect to home.
+  if (publicPaths.includes(pathname) && pathname !== '/') {
     console.log(`Middleware: Authenticated user on auth page (${pathname}), redirecting to /.`);
-    const redirectUrl = req.nextUrl.clone();
+    const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/';
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If authenticated and not on a public auth page, allow access.
-  return res;
+  // Allow the request to proceed if no redirection is needed.
+  return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|assets).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|auth/callback).*)',
   ],
 };
