@@ -2,12 +2,12 @@
 - Project is under development
 
 ## Project summary
-- A full-stack social media app built with:
-** TypeScript
-** Tailwind CSS v4
-** React
-** Next.js
-** Supabase
+A full-stack social media app built with:
+* TypeScript
+* Tailwind CSS v4
+* React
+* Next.js
+* Supabase
 
 **NB: Other supporting external libraries and tools used in the project will be added soon.**
 
