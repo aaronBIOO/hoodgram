@@ -4,7 +4,7 @@
 ## Project summary
 - A full-stack social media app built with:
 * TypeScript
-* Tailwind CSS, 
+* Tailwind CSS v4
 * React
 * Next.js
 * Supabase
